@@ -1,0 +1,94 @@
+#!/bin/bash
+
+#1
+for i in $(cat /etc/passwd | cut -d : -f 1,3); do
+        user=$(echo "$i" | cut -d : -f 1);
+        id=$(echo "$i" | cut -d : -f 2);
+        echo "user ${user} has id ${id}" >> work3.log
+done
+#2
+chage -l root | head -1 >> work3.log
+
+#3
+
+echo -e '\nGroup names\n' >> work3.log
+str=''
+for g in $(cat /etc/group | cut -d : -f 1); do
+        str="${str},${g}"
+done
+echo ${str} >> work3.log
+
+#4
+
+echo 'Be careful!' > /etc/skel/readme.txt
+
+#5
+useradd -m -p $(openssl passwd -6 12345678) -s /bin/bash -G users -u 2001 u1
+
+#6
+groupadd g1 &> /dev/null
+
+#7
+groupmod --users u1 -a g1 &> /dev/null
+
+#8
+id u1 >> work3.log
+
+#9
+useradd -m -p $(openssl passwd -6 12345678) -s /bin/bash -G users -u 4001 myuser
+
+groupmod --users myuser -a g1
+
+#10
+
+echo "g1 participants: $(cat /etc/group | grep g1 | cut -d : -f4)" >> work3.log
+
+
+#11
+
+echo -e '#!/bin/bash\n sudo /usr/bin/mc\n sudo login\n' > /home/u1/new_shell
+chmod 777 /home/u1/new_shell
+usermod -s /home/u1/new_shell u1
+
+#12
+
+useradd -m -p $(openssl passwd -6 87654321) -s /bin/bash -G users -u 3001 u2
+
+#13
+
+mkdir /home/test13
+
+cp ./work3.log /home/test13/work3-1.log
+cp ./work3.log /home/test13/work3-2.log
+
+#14
+
+usermod -aG g1 u2
+chown -R u1:g1 /home/test13
+
+chmod -R 640 /home/test13
+
+#15
+
+mkdir /home/test14
+chown u1:g1 /home/test14
+
+chmod -R 1777 /home/test14
+
+#16
+
+cp -f /usr/bin/nano /home/test14
+
+chmod 4755 /home/test14/nano
+
+#17
+mkdir /home/test15
+echo '' > /home/test15/secret_file
+
+
+chmod 333 /home/test15
+
+chmod 444 /home/test15/secret_file
+
+#18
+echo 'u1 ALL=(ALL) /usr/bin/passwd' >> /etc/sudoers

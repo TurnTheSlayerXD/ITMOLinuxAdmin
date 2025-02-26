@@ -1,0 +1,112 @@
+#!/bin/bash
+
+DISK_ONE='/dev/sdb'
+PART_ONE='/dev/sdb1'
+MOUNT_ONE='/mnt/newdisk'
+LINK_ONE='/root/newdisk'
+
+PART_TWO='/dev/sdb2'
+
+
+#1
+(echo n; echo p; echo 1; echo ""; echo "+500m"; echo w) | fdisk $DISK_ONE
+
+#2
+echo $(blkid -s UUID /dev/sdb1) > /root/part_one_id
+
+#3
+mke2fs -t ext4 -b 4096 $PART_ONE
+
+#4
+tune2fs -l $PART_ONE
+
+#5
+tune2fs -i 2m -c 2 $PART_ONE
+
+#6
+mkdir $MOUNT_ONE
+mount $PART_ONE $MOUNT_ONE
+
+#7
+
+ln -s $MOUNT_ONE $LINK_ONE
+
+#8
+mkdir "${LINK_ONE}/new_dir"
+
+#9
+
+cp /etc/fstab /etc/fstab-reserve
+echo "${PART_ONE} ${MOUNT_ONE} ext4 noexec,noatime 0 2" >> /etc/fstab
+
+#10
+umount $MOUNT_ONE
+(echo d; echo n; echo p; echo ""; echo "+1G"; echo y; echo w) | fdisk $DISK_ONE
+e2fsck -f $PART_ONE
+resize2fs $PART_ONE
+mount $MOUNT_ONE
+
+#11
+e2fsck -n /dev/sdb1
+
+#12
+
+(echo n; echo p; echo 1; echo ""; echo "+12M"; echo w) | fdisk $DISK_ONE
+
+mkfs.ext4 -t ext4 -J device=/dev/sdb2 /dev/sdb1
+tune2fs -l /dev/sdb1 | grep "Journal"
+
+#13
+
+fdisk /dev/sdc
+fdisk /dev/sdd
+
+pvcreate /dev/sdc1
+pvcreate /dev/sdd1
+
+#14
+vgcreate vg_group /dev/sdc1 /dev/sdd1
+lvcreate -L3G -i 2 -n lv_group vg_group
+mkfs.ext4 /dev/vg_group/lv_group
+
+mkdir /mnt/vol01
+
+#15
+echo "/dev/vg_group/lv_group /mnt/vol01 ext4 defaults 0 2" >> /etc/fstab
+
+mount -av
+
+#16
+lvdisplay
+
+#17
+
+
+
+fdisk /dev/sde
+vgextend vg_group /dev/sde1
+lvextend -l +100%FREE /dev/vg_group/lv_group
+
+#18
+resize2fs /dev/vg_group/lv_group
+
+#21
+echo '/mnt/vol01 10.0.2.0/24(rw,sync,no_root_squash,no_subtree_check)' >> /etc/exports
+exportfs -ra
+#22
+#client machine
+#mount -t nfs 10.0.2.12:/mnt/vol01 /var/remotefs/
+
+#or
+
+#10.0.2.15:/mnt/vol01    /var/remotenfs  nfs     defaults        0       0
+
+#24 - 25
+ls -i /mnt/vol01/
+ln -T /mnt/vol01/file.txt /mnt/vol01/hard_file.txt
+ln -s -T /mnt/vol01/file.txt /mnt/vol01/hard_file.txt
+
+
+stat /mnt/vol01/file.txt
+stat /mnt/vol01/hard_file.txt
+stat /mnt/vol01/sym_file.txt
